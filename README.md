@@ -11,7 +11,7 @@
 
 ## 👀 Demo
 
-- [SPlayer](https://music.imsyy.top/)
+- [SPlayer](https://music.kong.pub/)
 
 ## 🎉 功能
 
@@ -91,7 +91,7 @@ VITE_MUSIC_API = "your api url"
 
 ### 网易云解灰 API（可选）
 
-如需使用网易云解灰服务，请前往 [UNM-Server](https://github.com/imsyy/UNM-Server) 部署在线 API 服务并将 `API` 地址填入 `.env` 环境变量中，该服务用于网页端替换无法播放或无版权的歌曲。如不需要该服务，请前往站点的 `全局设置` 中关闭
+如需使用网易云解灰服务，请前往 [UNM-Server](https://github.com/Waynenet/UNM-Server) 部署在线 API 服务并将 `API` 地址填入 `.env` 环境变量中，该服务用于网页端替换无法播放或无版权的歌曲。如不需要该服务，请前往站点的 `全局设置` 中关闭
 
 ### 安装依赖
 
