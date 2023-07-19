@@ -34,6 +34,7 @@ export default ({ mode }) =>
         inject: {
           data: {
             logo: loadEnv(mode, process.cwd()).VITE_SITE_LOGO,
+            appleLogo: loadEnv(mode, process.cwd()).VITE_SITE_APPLE_LOGO,
             title: loadEnv(mode, process.cwd()).VITE_SITE_TITLE,
             author: loadEnv(mode, process.cwd()).VITE_SITE_ANTHOR,
             keywords: loadEnv(mode, process.cwd()).VITE_SITE_KEYWORDS,
@@ -101,6 +102,7 @@ export default ({ mode }) =>
     resolve: {
       alias: {
         "@": fileURLToPath(new URL("./src", import.meta.url)),
+        "vue-i18n": "vue-i18n/dist/vue-i18n.cjs.js",
       },
     },
     build: {

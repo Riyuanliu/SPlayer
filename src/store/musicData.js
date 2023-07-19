@@ -9,6 +9,7 @@ import { NIcon } from "naive-ui";
 import { PlayCycle, PlayOnce, ShuffleOne } from "@icon-park/vue-next";
 import { soundStop, fadePlayOrPause } from "@/utils/Player";
 import parseLyric from "@/utils/parseLyric";
+import getLanguageData from "@/utils/getLanguageData";
 
 const useMusicDataStore = defineStore("musicData", {
   state: () => {
@@ -190,29 +191,28 @@ const useMusicDataStore = defineStore("musicData", {
               }
             }
           } else {
-            $message.error("获取私人 FM 失败");
+            $message.error(getLanguageData("personalFmError"));
           }
         });
       } catch (err) {
-        console.error("获取私人 FM 失败：" + err);
-        $message.error("获取私人 FM 失败");
+        console.error(getLanguageData("personalFmError"), err);
+        $message.error(getLanguageData("personalFmError"));
       }
     },
     // 私人fm垃圾桶
-    setFmDislike(id, tip = true) {
+    setFmDislike(id) {
       const user = userStore();
       if (user.userLogin) {
         setFmTrash(id).then((res) => {
           if (res.code == 200) {
-            if (tip) $message.success("已将该歌曲移除至垃圾桶");
             this.persistData.personalFmMode = true;
             this.setPlaySongIndex("next");
           } else {
-            $message.error("歌曲移除至垃圾桶失败");
+            $message.error(getLanguageData("fmTrashError"));
           }
         });
       } else {
-        $message.error("请登录账号后使用");
+        $message.error(getLanguageData("needLogin"));
       }
     },
     // 更改喜欢列表
@@ -229,40 +229,36 @@ const useMusicDataStore = defineStore("musicData", {
       return this.persistData.likeList.includes(id);
     },
     // 移入移除喜欢列表
-    changeLikeList(id, like = true) {
+    async changeLikeList(id, like = true) {
       const user = userStore();
       const list = this.persistData.likeList;
       const exists = list.includes(id);
-      if (user.userLogin) {
-        if (like) {
-          if (!exists) {
-            setLikeSong(id, like).then((res) => {
-              if (res.code == 200) {
-                list.push(id);
-                $message.info("已添加到我喜欢的音乐");
-              } else {
-                $message.error("喜欢音乐时发生错误");
-              }
-            });
-          } else {
-            $message.info("我喜欢的音乐中已存在该歌曲");
+      if (!user.userLogin) {
+        $message.error(getLanguageData("needLogin"));
+        return;
+      }
+      try {
+        const res = await setLikeSong(id, like);
+        if (res.code === 200) {
+          if (like && !exists) {
+            list.push(id);
+            $message.info(getLanguageData("loveSong"));
+          } else if (!like && exists) {
+            list.splice(list.indexOf(id), 1);
+            $message.info(getLanguageData("loveSongRemove"));
+          } else if (like && exists) {
+            $message.info(getLanguageData("loveSongRepeat"));
           }
         } else {
-          if (exists) {
-            setLikeSong(id, like).then((res) => {
-              if (res.code == 200) {
-                list.splice(list.indexOf(id), 1);
-                $message.info("已从我喜欢的音乐中移除");
-              } else {
-                $message.error("取消喜欢音乐时发生错误");
-              }
-            });
+          if (like) {
+            $message.error(getLanguageData("loveSongError"));
           } else {
-            $message.error("我喜欢的列表中未找到该歌曲");
+            $message.error(getLanguageData("loveSongRemoveError"));
           }
         }
-      } else {
-        $message.error("请登录账号后使用");
+      } catch (error) {
+        console.error(getLanguageData("loveSongError"), error);
+        $message.error(getLanguageData("loveSongError"));
       }
     },
     // 更改音乐播放状态
@@ -284,7 +280,6 @@ const useMusicDataStore = defineStore("musicData", {
     // 添加歌单至播放列表
     setPlaylists(value) {
       this.persistData.playlists = value.slice();
-      console.log(`已添加${value.length}首歌曲至播放列表`);
     },
     // 更改每日推荐数据
     setDailySongs(value) {
@@ -303,8 +298,6 @@ const useMusicDataStore = defineStore("musicData", {
             mv: v.mv ? v.mv : null,
           });
         });
-      } else {
-        $message.error("处理每日推荐发生错误");
       }
     },
     // 歌词处理
@@ -313,12 +306,18 @@ const useMusicDataStore = defineStore("musicData", {
         try {
           this.playSongLyric = parseLyric(value);
         } catch (err) {
-          $message.error("歌词处理出错");
-          console.error("歌词处理出错：" + err);
+          $message.error(getLanguageData("getLrcError"));
+          console.error(getLanguageData("getLrcError"), err);
         }
       } else {
         console.log("该歌曲暂无歌词");
-        this.playSongLyric = [];
+        this.playSongLyric = {
+          lrc: [],
+          yrc: [],
+          hasTran: false,
+          hasTran: false,
+          hasYrc: false,
+        };
       }
     },
     // 歌曲播放进度
@@ -346,27 +345,40 @@ const useMusicDataStore = defineStore("musicData", {
       const setting = settingStore();
       const lrcType = !this.playSongLyric.hasYrc || !setting.showYrc;
       const lyrics = lrcType ? this.playSongLyric.lrc : this.playSongLyric.yrc;
-      const index = lyrics.findIndex((v) => v.time >= value.currentTime);
+      const index = lyrics?.findIndex((v) => v?.time >= value?.currentTime);
       this.playSongLyricIndex = index === -1 ? lyrics.length - 1 : index - 1;
     },
     // 设置当前播放模式
-    setPlaySongMode() {
-      if (this.persistData.playSongMode === "normal") {
-        this.persistData.playSongMode = "random";
-        $message.info("随机播放", {
-          icon: () => h(NIcon, null, { default: () => h(ShuffleOne) }),
-        });
-      } else if (this.persistData.playSongMode === "random") {
-        this.persistData.playSongMode = "single";
-        $message.info("单曲循环", {
-          icon: () => h(NIcon, null, { default: () => h(PlayOnce) }),
-        });
+    setPlaySongMode(value = null) {
+      const modeObj = {
+        normal: PlayCycle,
+        random: ShuffleOne,
+        single: PlayOnce,
+      };
+      if (value && value in modeObj) {
+        this.persistData.playSongMode = value;
       } else {
-        this.persistData.playSongMode = "normal";
-        $message.info("列表循环", {
-          icon: () => h(NIcon, null, { default: () => h(PlayCycle) }),
-        });
+        switch (this.persistData.playSongMode) {
+          case "normal":
+            this.persistData.playSongMode = "random";
+            value = "random";
+            break;
+          case "random":
+            this.persistData.playSongMode = "single";
+            value = "single";
+            break;
+          default:
+            this.persistData.playSongMode = "normal";
+            value = "normal";
+            break;
+        }
       }
+      $message.info(getLanguageData(value), {
+        icon: () =>
+          h(NIcon, null, {
+            default: () => h(modeObj[this.persistData.playSongMode]),
+          }),
+      });
     },
     // 上下曲调整
     setPlaySongIndex(type) {
@@ -389,7 +401,7 @@ const useMusicDataStore = defineStore("musicData", {
           soundStop($player);
           fadePlayOrPause($player, "play", this.persistData.playVolume);
         } else {
-          $message.error("播放出错，请刷新后重试");
+          $message.error(getLanguageData("playError"));
         }
         // 判断是否处于最后/第一首
         if (this.persistData.playSongIndex < 0) {
@@ -409,21 +421,23 @@ const useMusicDataStore = defineStore("musicData", {
     },
     // 添加歌曲至播放列表
     addSongToPlaylists(value, play = true) {
+      // 停止当前播放
+      if (typeof $player !== "undefined") soundStop($player);
+      // 判断与上一次播放歌曲是否一致
       const index = this.persistData.playlists.findIndex(
         (o) => o.id === value.id
       );
-      // 判断与上一次播放歌曲是否一致
       try {
         if (
           value.id !==
           this.persistData.playlists[this.persistData.playSongIndex]?.id
         ) {
-          console.log("播放歌曲与上一次不一致");
+          console.log("Play a song that is not the same as the last one");
           if (typeof $player !== "undefined") soundStop($player);
           this.isLoadingSong = true;
         }
       } catch (error) {
-        console.error("出现错误：" + error);
+        console.error("Error:" + error);
       }
       if (index !== -1) {
         this.persistData.playSongIndex = index;
@@ -435,6 +449,9 @@ const useMusicDataStore = defineStore("musicData", {
     },
     // 在当前播放歌曲后添加
     addSongToNext(value) {
+      // 更改播放模式为列表循环
+      this.persistData.playSongMode = "normal";
+      // 查找是否存在于播放列表
       const index = this.persistData.playlists.findIndex(
         (o) => o.id === value.id
       );
@@ -456,7 +473,7 @@ const useMusicDataStore = defineStore("musicData", {
           value
         );
       }
-      $message.success(value.name + " 已添加至下一曲播放");
+      $message.success(value.name + " " + getLanguageData("addSongToNext"));
     },
     // 播放列表移除歌曲
     removeSong(index) {
@@ -468,7 +485,7 @@ const useMusicDataStore = defineStore("musicData", {
         // 如果删除的是当前播放歌曲，则重置播放器
         soundStop($player);
       }
-      $message.success(name + " 已从播放列表中移除");
+      $message.success(name + " " + getLanguageData("removeSong"));
       this.persistData.playlists.splice(index, 1);
       // 检查当前播放歌曲的索引是否超出了列表范围
       if (this.persistData.playSongIndex >= this.persistData.playlists.length) {
@@ -482,7 +499,7 @@ const useMusicDataStore = defineStore("musicData", {
         if (res.code == 200) {
           this.catList = res;
         } else {
-          $message.error("歌单分类获取失败");
+          $message.error(getLanguageData("getDataError"));
         }
       });
       if (highquality) {
@@ -490,7 +507,7 @@ const useMusicDataStore = defineStore("musicData", {
           if (res.code == 200) {
             this.highqualityCatList = res.tags;
           } else {
-            $message.error("精品歌单分类获取失败");
+            $message.error(getLanguageData("getDataError"));
           }
         });
       }

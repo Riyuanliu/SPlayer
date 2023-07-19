@@ -52,67 +52,73 @@
               @click.stop="router.push(`/song?id=${music.getPlaySongData.id}`)"
             >
               {{
-                music.getPlaySongData ? music.getPlaySongData.name : "暂无歌曲"
+                music.getPlaySongData
+                  ? music.getPlaySongData.name
+                  : $t("other.noSong")
               }}
             </div>
+            <!-- 显示歌手或歌词 -->
             <div class="artisrOrLrc" v-if="music.getPlaySongData">
-              <template v-if="setting.bottomLyricShow">
-                <Transition mode="out-in">
-                  <AllArtists
-                    v-if="!music.getPlayState || !music.getPlaySongLyric.lrc[0]"
-                    class="text-hidden"
-                    :artistsData="music.getPlaySongData.artist"
-                  />
-                  <n-text
-                    v-else-if="
-                      setting.showYrc &&
-                      music.getPlaySongLyricIndex != -1 &&
-                      music.getPlaySongLyric.hasYrc
-                    "
-                    class="lrc text-hidden"
-                  >
+              <Transition name="fade" mode="out-in">
+                <template v-if="setting.bottomLyricShow">
+                  <Transition name="fade" mode="out-in">
+                    <AllArtists
+                      v-if="
+                        !music.getPlayState || !music.getPlaySongLyric?.lrc[0]
+                      "
+                      class="text-hidden"
+                      :artistsData="music.getPlaySongData.artist"
+                    />
                     <n-text
-                      v-for="item in music.getPlaySongLyric.yrc[
-                        music.getPlaySongLyricIndex
-                      ].content"
-                      :key="item"
-                      :depth="3"
+                      v-else-if="
+                        setting.showYrc &&
+                        music.getPlaySongLyricIndex != -1 &&
+                        music.getPlaySongLyric.hasYrc
+                      "
+                      class="lrc text-hidden"
                     >
-                      {{ item.content }}
+                      <n-text
+                        v-for="item in music.getPlaySongLyric.yrc[
+                          music.getPlaySongLyricIndex
+                        ].content"
+                        :key="item"
+                        :depth="3"
+                      >
+                        {{ item.content }}
+                      </n-text>
                     </n-text>
-                  </n-text>
-                  <n-text
-                    v-else-if="
-                      music.getPlaySongLyricIndex != -1 &&
-                      music.getPlaySongLyric.lrc[0]
-                    "
-                    class="lrc text-hidden"
-                    :depth="3"
-                    v-html="
-                      music.getPlaySongLyric.lrc[music.getPlaySongLyricIndex]
-                        .content
-                    "
-                  />
+                    <n-text
+                      v-else-if="
+                        music.getPlaySongLyricIndex != -1 &&
+                        music.getPlaySongLyric?.lrc[0]
+                      "
+                      class="lrc text-hidden"
+                      :depth="3"
+                      v-html="
+                        music.getPlaySongLyric.lrc[music.getPlaySongLyricIndex]
+                          .content
+                      "
+                    />
+                    <AllArtists
+                      v-else
+                      class="text-hidden"
+                      :artistsData="music.getPlaySongData.artist"
+                    />
+                  </Transition>
+                </template>
+                <template v-else>
                   <AllArtists
-                    v-else
                     class="text-hidden"
                     :artistsData="music.getPlaySongData.artist"
                   />
-                </Transition>
-              </template>
-              <template v-else>
-                <AllArtists
-                  class="text-hidden"
-                  :artistsData="music.getPlaySongData.artist"
-                />
-              </template>
+                </template>
+              </Transition>
             </div>
           </div>
         </div>
         <div class="control">
           <n-icon
             v-if="!music.getPersonalFmMode"
-            title="上一曲"
             class="prev"
             size="30"
             :component="SkipPreviousRound"
@@ -128,7 +134,6 @@
           <div class="play-state">
             <n-icon
               size="46"
-              :title="music.getPlayState ? '暂停' : '播放'"
               :component="
                 music.getPlayState ? PauseCircleFilled : PlayCircleFilled
               "
@@ -143,65 +148,109 @@
           />
         </div>
         <div :class="music.getPersonalFmMode ? 'menu fm' : 'menu'">
-          <div class="like" v-if="music.getPlaySongData">
-            <n-icon
-              class="like-icon"
-              size="24"
-              :component="
-                music.getSongIsLike(music.getPlaySongData.id)
-                  ? FavoriteRound
-                  : FavoriteBorderRound
-              "
-              @click.stop="
-                music.getSongIsLike(music.getPlaySongData.id)
-                  ? music.changeLikeList(music.getPlaySongData.id, false)
-                  : music.changeLikeList(music.getPlaySongData.id, true)
-              "
-            />
-          </div>
-          <div class="add-playlist">
-            <n-icon
-              class="add-icon"
-              size="30"
-              :component="PlaylistAddRound"
-              @click.stop="
-                addPlayListRef.openAddToPlaylist(music.getPlaySongData.id)
-              "
-            />
-          </div>
-          <div class="pattern">
-            <n-icon
-              :component="
-                persistData.playSongMode === 'normal'
-                  ? PlayCycle
-                  : persistData.playSongMode === 'random'
-                  ? ShuffleOne
-                  : PlayOnce
-              "
-              @click="music.setPlaySongMode()"
-            />
-          </div>
-          <div :class="music.showPlayList ? 'playlist open' : 'playlist'">
-            <n-icon
-              size="30"
-              :component="PlaylistPlayRound"
-              @click.stop="music.showPlayList = !music.showPlayList"
-            />
-          </div>
+          <n-popover
+            v-if="music.getPlaySongData"
+            trigger="hover"
+            :keep-alive-on-hover="false"
+          >
+            <template #trigger>
+              <div class="like">
+                <n-icon
+                  class="like-icon"
+                  size="24"
+                  :component="
+                    music.getSongIsLike(music.getPlaySongData.id)
+                      ? FavoriteRound
+                      : FavoriteBorderRound
+                  "
+                  @click.stop="
+                    music.getSongIsLike(music.getPlaySongData.id)
+                      ? music.changeLikeList(music.getPlaySongData.id, false)
+                      : music.changeLikeList(music.getPlaySongData.id, true)
+                  "
+                />
+              </div>
+            </template>
+            {{
+              music.getSongIsLike(music.getPlaySongData.id)
+                ? $t("menu.cancelCollection")
+                : $t("menu.collection")
+            }}
+          </n-popover>
+          <n-popover trigger="hover" :keep-alive-on-hover="false">
+            <template #trigger>
+              <div class="add-playlist">
+                <n-icon
+                  class="add-icon"
+                  size="30"
+                  :component="PlaylistAddRound"
+                  @click.stop="
+                    addPlayListRef.openAddToPlaylist(music.getPlaySongData.id)
+                  "
+                />
+              </div>
+            </template>
+            {{ $t("menu.add") }}
+          </n-popover>
+          <n-dropdown
+            trigger="hover"
+            :options="patternOptions"
+            :show-arrow="true"
+            @select="patternClick"
+          >
+            <div class="pattern">
+              <n-icon
+                :component="
+                  persistData.playSongMode === 'normal'
+                    ? PlayCycle
+                    : persistData.playSongMode === 'random'
+                    ? ShuffleOne
+                    : PlayOnce
+                "
+                @click="music.setPlaySongMode()"
+              />
+            </div>
+          </n-dropdown>
+          <n-popover trigger="hover" :keep-alive-on-hover="false">
+            <template #trigger>
+              <div :class="music.showPlayList ? 'playlist open' : 'playlist'">
+                <n-icon
+                  size="30"
+                  :component="PlaylistPlayRound"
+                  @click.stop="music.showPlayList = !music.showPlayList"
+                />
+              </div>
+            </template>
+            {{ $t("general.name.playlists") }}
+          </n-popover>
+
           <div class="volume">
-            <n-icon
-              size="28"
-              :component="
-                persistData.playVolume == 0
-                  ? VolumeOffRound
-                  : persistData.playVolume < 0.4
-                  ? VolumeMuteRound
-                  : persistData.playVolume < 0.7
-                  ? VolumeDownRound
-                  : VolumeUpRound
-              "
-              @click.stop="volumeMute"
-            />
+            <n-popover
+              trigger="hover"
+              placement="top-start"
+              :keep-alive-on-hover="false"
+            >
+              <template #trigger>
+                <n-icon
+                  size="28"
+                  :component="
+                    persistData.playVolume == 0
+                      ? VolumeOffRound
+                      : persistData.playVolume < 0.4
+                      ? VolumeMuteRound
+                      : persistData.playVolume < 0.7
+                      ? VolumeDownRound
+                      : VolumeUpRound
+                  "
+                  @click.stop="volumeMute"
+                />
+              </template>
+              {{
+                persistData.playVolume > 0
+                  ? $t("general.name.mute")
+                  : $t("general.name.unmute")
+              }}
+            </n-popover>
             <n-slider
               class="volmePg"
               v-model:value="persistData.playVolume"
@@ -260,6 +309,7 @@ import {
 import { getSongPlayingTime } from "@/utils/timeTools";
 import { useRouter } from "vue-router";
 import { debounce } from "throttle-debounce";
+import { useI18n } from "vue-i18n";
 import VueSlider from "vue-slider-component";
 import AddPlaylist from "@/components/DataModal/AddPlaylist.vue";
 import PlayListDrawer from "@/components/DataModal/PlayListDrawer.vue";
@@ -268,6 +318,7 @@ import ColorThief from "colorthief";
 import BigPlayer from "./BigPlayer.vue";
 import "vue-slider-component/theme/default.css";
 
+const { t } = useI18n();
 const router = useRouter();
 const setting = settingStore();
 const music = musicStore();
@@ -302,7 +353,7 @@ const getPlaySongData = (data, level = setting.songLevel) => {
         if (res.success) {
           console.log("当前歌曲可用");
           if (!pc && (fee === 1 || fee === 4))
-            $message.info("当前歌曲为 VIP 专享，仅可试听");
+            $message.info(t("general.message.vipTip"));
           // 获取音乐地址
           getMusicUrl(id, level).then((res) => {
             player.value = createSound(
@@ -313,7 +364,7 @@ const getPlaySongData = (data, level = setting.songLevel) => {
           if (useUnmServerHas && setting.useUnmServer) {
             getMusicNumUrlData(id);
           } else {
-            $message.warning("当前歌曲播放失败，跳至下一首");
+            $message.warning(t("general.message.playError"));
             music.setPlaySongIndex("next");
           }
         }
@@ -326,10 +377,23 @@ const getPlaySongData = (data, level = setting.songLevel) => {
   } catch (err) {
     if (music.getPlaylists[0] && music.getPlayState) {
       console.log("当前歌曲所有音源匹配失败：" + err);
-      $message.warning("当前歌曲所有音源匹配失败，跳至下一首");
+      $message.warning(t("general.message.playError"));
       music.setPlaySongIndex("next");
     }
   }
+};
+
+// 图标渲染
+const renderIcon = (icon) => {
+  return () => {
+    return h(
+      NIcon,
+      { style: { transform: "translateX(1px)" } },
+      {
+        default: () => icon,
+      }
+    );
+  };
 };
 
 // 网易云解灰
@@ -337,13 +401,21 @@ const getMusicNumUrlData = (id) => {
   getMusicNumUrl(id)
     .then((res) => {
       if (res.code === 200) {
-        console.log("替换成功：" + res.data.url.replace(/^http:/, ""));
-        player.value = createSound(res.data.url.replace(/^http:/, ""));
+        const songUrl = res.data.url.replace(/^http:/, "");
+        // 匹配酷我域名
+        const pattern = /kuwo\.cn/i;
+        if (pattern.test(songUrl) && res.data?.proxyUrl) {
+          player.value = createSound(res.data.proxyUrl);
+          console.log("替换成功：" + res.data.proxyUrl);
+        } else {
+          player.value = createSound(songUrl);
+          console.log("替换成功：" + songUrl);
+        }
       }
     })
     .catch((err) => {
       console.log("解灰失败：" + err);
-      $message.warning("当前歌曲解灰失败，跳至下一首");
+      $message.warning(t("general.message.playError"));
       music.setPlaySongIndex("next");
     });
 };
@@ -368,6 +440,30 @@ const volumeMute = () => {
   } else {
     persistData.value.playVolume = persistData.value.playVolumeMute;
   }
+};
+
+// 播放模式数据
+const patternOptions = ref([
+  {
+    label: t("general.name.random"),
+    key: "random",
+    icon: renderIcon(h(ShuffleOne)),
+  },
+  {
+    label: t("general.name.single"),
+    key: "single",
+    icon: renderIcon(h(PlayOnce)),
+  },
+  {
+    label: t("general.name.normal"),
+    key: "normal",
+    icon: renderIcon(h(PlayCycle)),
+  },
+]);
+
+// 播放模式点击
+const patternClick = (val) => {
+  music.setPlaySongMode(val);
 };
 
 // 歌曲更换事件
@@ -456,6 +552,15 @@ watch(
 .show-enter-from,
 .show-leave-to {
   transform: translateY(80px);
+}
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 .player {
   height: 70px;
@@ -582,15 +687,6 @@ watch(
         .artisrOrLrc {
           font-size: 12px;
           margin-top: 2px;
-          .v-enter-active,
-          .v-leave-active {
-            transition: opacity 0.3s ease;
-          }
-
-          .v-enter-from,
-          .v-leave-to {
-            opacity: 0;
-          }
         }
       }
     }

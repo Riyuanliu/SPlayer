@@ -3,6 +3,7 @@ import { songScrobble } from "@/api/song";
 import { musicStore } from "@/store";
 import { NIcon } from "naive-ui";
 import { MusicNoteFilled } from "@vicons/material";
+import getLanguageData from "./getLanguageData";
 
 // 歌曲信息更新定时器
 let timeupdateInterval = null;
@@ -73,23 +74,28 @@ export const createSound = (src, autoPlay = true) => {
     // 播放事件
     sound?.on("play", () => {
       if (!Object.keys(music.getPlaySongData).length) {
-        $message.error("音乐数据获取失败");
+        $message.error(getLanguageData("songLoadError"));
         return false;
       }
       testNumber = 0;
       music.setPlayState(true);
-      const songName = music.getPlaySongData.name;
-      const songArtist = music.getPlaySongData.artist[0].name;
-      $message.info(songName + " - " + songArtist, {
-        icon: () =>
-          h(NIcon, null, {
-            default: () => h(MusicNoteFilled),
-          }),
-      });
+      const songName = music.getPlaySongData?.name;
+      const songArtist = music.getPlaySongData.artist[0]?.name;
+      // 播放通知
+      if (typeof $message !== "undefined" && songArtist !== null) {
+        $message.info(songName + " - " + songArtist, {
+          icon: () =>
+            h(NIcon, null, {
+              default: () => h(MusicNoteFilled),
+            }),
+        });
+      } else {
+        $message.warning(getLanguageData("songNotDetails"));
+      }
       console.log("开始播放：" + songName + " - " + songArtist);
+      setMediaSession(music);
       // 获取播放器信息
       timeupdateInterval = setInterval(() => checkAudioTime(sound, music), 250);
-      setMediaSession(music);
       // 写入播放历史
       music.setPlayHistory(music.getPlaySongData);
       // 播放时页面标题
@@ -116,23 +122,23 @@ export const createSound = (src, autoPlay = true) => {
     // 错误事件
     sound?.on("loaderror", () => {
       if (testNumber > 2) {
-        $message.error("歌曲播放失败");
-        console.error("歌曲播放失败");
+        $message.error(getLanguageData("songPlayError"));
+        console.error(getLanguageData("songPlayError"));
         music.setPlayState(false);
       }
       if (testNumber < 4) {
         if (music.getPlaylists[0]) $getPlaySongData(music.getPlaySongData);
         testNumber++;
       } else {
-        $message.error("歌曲重试次数过多，请刷新后重试", {
+        $message.error(getLanguageData("songLoadTest"), {
           closable: true,
           duration: 0,
         });
       }
     });
     sound?.on("playerror", () => {
-      $message.error("歌曲播放出错");
-      console.error("歌曲播放出错");
+      $message.error(getLanguageData("songPlayError"));
+      console.error(getLanguageData("songPlayError"));
       music.setPlayState(false);
     });
     // 生成频谱
@@ -140,8 +146,8 @@ export const createSound = (src, autoPlay = true) => {
     // 返回音频对象
     return (window.$player = sound);
   } catch (err) {
-    $message.error("音乐播放器初始化失败");
-    console.error("音乐播放器初始化失败：" + err);
+    $message.error(getLanguageData("songLoadError"));
+    console.error(getLanguageData("songLoadError"), err);
   }
 };
 

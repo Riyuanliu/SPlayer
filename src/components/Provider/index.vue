@@ -21,7 +21,7 @@
     <n-loading-bar-provider>
       <n-dialog-provider>
         <n-notification-provider>
-          <n-message-provider>
+          <n-message-provider :max="1">
             <slot></slot>
             <NaiveProviderContent />
           </n-message-provider>
@@ -62,14 +62,30 @@ const changeTheme = () => {
   }
 };
 
+// 根据系统决定明暗切换
+const osThemeChange = (val) => {
+  if (setting.themeAuto) {
+    val == "dark" ? (setting.theme = "dark") : (setting.theme = "light");
+  }
+};
+
 // 配置主题色
 const changeThemeColor = (val) => {
-  const color = themeColorData[val];
-  console.log("当前主题色：" + val, color);
-  themeOverrides.value = {
-    common: color,
-  };
-  setting.themeData = color;
+  let color = null;
+  if (val !== "custom") {
+    color = themeColorData[val];
+    console.log("当前主题色：" + val, color);
+    themeOverrides.value = {
+      common: color,
+    };
+    setting.themeData = color;
+  } else {
+    color = setting.themeData;
+    console.log("当前主题色为自定义：" + val, color);
+    themeOverrides.value = {
+      common: color,
+    };
+  }
   setCssVariable("--main-color", color.primaryColor);
   setCssVariable("--main-second-color", color.primaryColor + "1f");
   setCssVariable("--main-boxshadow-color", color.primaryColor + "26");
@@ -109,11 +125,7 @@ watch(
 watch(
   () => osThemeRef.value,
   (val) => {
-    if (setting.themeAuto) {
-      val == "dark"
-        ? setting.setSiteTheme("dark")
-        : setting.setSiteTheme("light");
-    }
+    osThemeChange(val);
   }
 );
 
@@ -122,9 +134,14 @@ watch(
   () => setting.themeType,
   (val) => changeThemeColor(val)
 );
+watch(
+  () => setting.themeData,
+  (val) => changeThemeColor(val.label)
+);
 
 onMounted(() => {
   changeTheme();
   changeThemeColor(setting.themeType);
+  osThemeChange(osThemeRef.value);
 });
 </script>

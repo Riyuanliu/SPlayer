@@ -43,10 +43,11 @@ export const getMusicUrl = (id, level = "exhigh") => {
  * @param {number} id - 要替换播放链接的音乐ID
  */
 export const getMusicNumUrl = async (id) => {
-  const server =
-    process.env.NODE_ENV === "development"
-      ? "kuwo,qq,pyncmd,kugou"
-      : "qq,pyncmd,kugou";
+  // const server =
+  //   process.env.NODE_ENV === "development"
+  //     ? "kuwo,qq,pyncmd,kugou"
+  //     : "qq,pyncmd,kugou";
+  const server = "kuwo,qq,pyncmd,kugou";
   const url = `${import.meta.env.VITE_UNM_API}match?id=${id}&server=${server}`;
   const response = await fetch(url, {
     method: "GET",
@@ -97,9 +98,11 @@ export const getMusicNewLyric = (id) => {
 export const getMusicDetail = (ids) => {
   return axios({
     method: "GET",
+    hiddenBar: true,
     url: "/song/detail",
     params: {
       ids,
+      timestamp: new Date().getTime(),
     },
   });
 };
@@ -140,6 +143,7 @@ export const getSimiSong = (id) => {
 export const getSongDownload = (id, br = 999000) => {
   return axios({
     method: "GET",
+    hiddenBar: true,
     url: "/song/download/url",
     params: {
       id,

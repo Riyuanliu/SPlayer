@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import routes from "./routes";
 import { getLoginState } from "@/api/login";
-import { userStore } from "@/store";
+import { userStore, musicStore } from "@/store";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -11,7 +11,11 @@ const router = createRouter({
 // 路由守卫
 router.beforeEach((to, from, next) => {
   const user = userStore();
-  $loadingBar.start();
+  const music = musicStore();
+  // 关闭播放器
+  music.setBigPlayerState(false);
+  // 开始进度条
+  if (typeof $loadingBar !== "undefined") $loadingBar.start();
   // 判断是否需要登录
   if (to.meta.needLogin) {
     getLoginState()
@@ -45,7 +49,7 @@ router.beforeEach((to, from, next) => {
 });
 
 router.afterEach(() => {
-  $loadingBar.finish();
+  if (typeof $loadingBar !== "undefined") $loadingBar.finish();
 });
 
 export default router;
